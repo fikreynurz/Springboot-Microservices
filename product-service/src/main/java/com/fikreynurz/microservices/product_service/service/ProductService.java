@@ -14,32 +14,24 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class ProductService {
-
     private final ProductRepository productRepository;
 
     public ProductResponse createProduct(ProductRequest productRequest) {
-        Product product = new Product();
-        product.setName(productRequest.name()); 
-        product.setDescription(productRequest.description()); 
-        product.setPrice(productRequest.price()); 
-
-        Product savedProduct = productRepository.save(product);
-
-        return new ProductResponse(
-                savedProduct.getId(),
-                savedProduct.getName(),
-                savedProduct.getDescription(),
-                savedProduct.getPrice());
+        Product product = Product.builder()
+                .id(productRequest.id())
+                .name(productRequest.name())
+                .description(productRequest.description())
+                .price(productRequest.price())
+                .build();
+        productRepository.save(product);
+        log.info("Product created: {}", product);
+        return new ProductResponse(product.getId(), product.getName(), product.getDescription(), product.getPrice().toString());
     }
 
     public List<ProductResponse> getAllProducts() {
-        List<Product> products = productRepository.findAll();
-
-        return products.stream().map(this::mapToProductResponse).toList();
-    }
-
-    private ProductResponse mapToProductResponse(Product product) {
-        return new ProductResponse(product.getId(), product.getName(),
-                product.getDescription(), product.getPrice());
+        return productRepository.findAll()
+                .stream()
+                .map(product -> new ProductResponse(product.getId(), product.getName(), product.getDescription(), product.getPrice().toString()))
+                .toList();
     }
 }

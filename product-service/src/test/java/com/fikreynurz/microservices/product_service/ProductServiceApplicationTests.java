@@ -1,54 +1,50 @@
 package com.fikreynurz.microservices.product_service;
 
-import io.restassured.RestAssured;
-import io.restassured.parsing.Parser;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import io.restassured.RestAssured;
+
 @Import(TestcontainersConfiguration.class)
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ProductServiceApplicationTests {
 
 	@Container
 	@ServiceConnection
-	static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:latest");
-
-	private static final int FIXED_PORT = 8080;
-
-	@BeforeAll
-	static void startMongoDB() {
-		mongoDBContainer.start();
-		System.setProperty("spring.data.mongodb.uri", mongoDBContainer.getReplicaSetUrl());
-		System.setProperty("server.port", String.valueOf(FIXED_PORT));
-
-		RestAssured.defaultParser = Parser.JSON;
-	}
+	static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0.5");
+	
+	@LocalServerPort
+	private Integer port;
 
 	@BeforeEach
-	void setup() {
+	void setup(){
 		RestAssured.baseURI = "http://localhost";
-		RestAssured.port = FIXED_PORT;
+		RestAssured.port = port;
+	}
+
+	static{
+		mongoDBContainer.start();
 	}
 
 	@Test
 	void shouldCreateProduct() {
 		String requestBody = """
-				    {
-				        "name": "Iphone 15",
-				        "description": "Iphone 15 is smartphone from Apple",
-				        "price": 1000
-				    }
-				""";
-
+				{
+					"name": "Iphone 15",
+					"description": "Iphone 15 is smartphone from Apple",
+					"price": 1000
+				}
+			""";
+		
 		RestAssured.given()
 				.contentType("application/json")
 				.body(requestBody)
@@ -56,7 +52,10 @@ class ProductServiceApplicationTests {
 				.post("/api/product")
 				.then()
 				.statusCode(201)
-				.body("message", Matchers.equalTo("Product created successfully"));
-
+				.body("id", Matchers.notNullValue())
+				.body("name", Matchers.equalTo("Iphone 15"))
+				.body("description", Matchers.equalTo("Iphone 15 is smartphone from Apple"))
+				.body("price", Matchers.equalTo("1000"));
 	}
+
 }
